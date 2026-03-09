@@ -1,6 +1,49 @@
 import { getStoredTaxRate, parsePrice } from "./taxUtils.js";
 import { showTooltip, hideTooltip } from "./tooltip.js";
 
+function normalizeText(text) {
+  return (text || "").replace(/\s+/g, " ").trim();
+}
+
+function getSelectionContext(range, selectedText) {
+  const selected = normalizeText(selectedText);
+  const anchor =
+    range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+      ? range.commonAncestorContainer
+      : range.commonAncestorContainer.parentElement;
+
+  if (!anchor || !anchor.textContent) {
+    return selected;
+  }
+
+  const fullText = normalizeText(anchor.textContent);
+  if (!fullText) {
+    return selected;
+  }
+
+  const index = fullText.toLowerCase().indexOf(selected.toLowerCase());
+  if (index < 0) {
+    return fullText.slice(0, 300);
+  }
+
+  const start = Math.max(0, index - 120);
+  const end = Math.min(fullText.length, index + selected.length + 120);
+  return fullText.slice(start, end);
+}
+
+function isEditableSelection(range) {
+  const node =
+    range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+      ? range.commonAncestorContainer
+      : range.commonAncestorContainer.parentElement;
+
+  if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+    return false;
+  }
+
+  return Boolean(node.closest("input, textarea, [contenteditable=''], [contenteditable='true'], [role='textbox']"));
+}
+
 document.addEventListener("mouseup", async () => {
   const selection = window.getSelection();
 
@@ -15,13 +58,6 @@ document.addEventListener("mouseup", async () => {
     return;
   }
 
-  const price = parsePrice(text);
-  if (price === null) {
-    hideTooltip();
-    return;
-  }
-
-  const taxRate = await getStoredTaxRate();
   let range, rect;
   try {
     range = selection.getRangeAt(0);
@@ -31,6 +67,20 @@ document.addEventListener("mouseup", async () => {
     hideTooltip();
     return;
   }
+
+  if (isEditableSelection(range)) {
+    hideTooltip();
+    return;
+  }
+
+  const contextText = getSelectionContext(range, text);
+  const price = parsePrice(text, contextText);
+  if (price === null) {
+    hideTooltip();
+    return;
+  }
+
+  const taxRate = await getStoredTaxRate();
   const x = rect.left + window.scrollX + rect.width / 2;
   const y = rect.bottom + window.scrollY + 5;
 
@@ -44,11 +94,5 @@ document.addEventListener("mouseup", async () => {
 });
 
 document.addEventListener("mousedown", () => {
-  hideTooltip();
-});
-
-
-document.addEventListener("mousedown", () => {
-  console.log("Mouse down - hiding tooltip");
   hideTooltip();
 });

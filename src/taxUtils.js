@@ -1,8 +1,123 @@
-export function parsePrice(text) {
-  const cleaned = text.replace(/[^0-9.]/g, "");
-  const value = parseFloat(cleaned);
-  console.log(`Parsed value from "${text}" is ${value}`);
-  return isNaN(value) ? null : value;
+const CURRENCY_SYMBOL_RE = /[$\u00A3\u00A5\u20AC\u20B9]/;
+const CURRENCY_CODE_RE = /\b(?:USD|CAD|EUR|GBP|JPY|INR|AUD|NZD|CHF)\b/i;
+const PRICE_KEYWORD_RE =
+  /\b(?:price|total|amount|cost|subtotal|checkout|cart|sale|deal|discount|pay|payment|paid|due|from|now|was|only|each|per|msrp|list\s+price|starting\s+at)\b/i;
+const STRONG_PRICE_KEYWORD_RE = /\b(?:price|total|amount|cost|subtotal|due)\b/i;
+const NON_PRICE_KEYWORD_RE =
+  /\b(?:phone|tel|mobile|fax|call|item(?:\s*no\.?)?|order(?:\s*no\.?)?|invoice|tracking|shipment|id|sku|serial|reference|ref|ticket|account|zip|postal|pin|ssn|model|part)\b/i;
+
+function normalizeText(text) {
+  return (text || "").replace(/\s+/g, " ").trim();
+}
+
+function looksLikePhoneNumber(text) {
+  const trimmed = normalizeText(text).replace(/\b(?:ext|x)\s*\d+$/i, "").trim();
+  const digits = trimmed.replace(/\D/g, "");
+
+  if (digits.length < 9 || digits.length > 13) {
+    return false;
+  }
+
+  if (CURRENCY_SYMBOL_RE.test(trimmed) || CURRENCY_CODE_RE.test(trimmed)) {
+    return false;
+  }
+
+  return /[\s().-]/.test(trimmed) || /^\+?\d+$/.test(trimmed);
+}
+
+function looksLikeIdentifier(text) {
+  const trimmed = normalizeText(text);
+  if (!trimmed) {
+    return false;
+  }
+
+  // Common ID patterns like A12B-90, #123456, INV-1234, etc.
+  return (
+    /[A-Za-z]/.test(trimmed) &&
+    /\d/.test(trimmed) &&
+    !CURRENCY_CODE_RE.test(trimmed)
+  );
+}
+
+export function parsePrice(text, contextText = "") {
+  const raw = normalizeText(text);
+  const context = normalizeText(contextText);
+
+  if (!raw || /%/.test(raw)) {
+    return null;
+  }
+
+  const combinedContext = `${context} ${raw}`;
+  const hasCurrencySignal =
+    CURRENCY_SYMBOL_RE.test(combinedContext) || CURRENCY_CODE_RE.test(combinedContext);
+  const hasPriceKeyword = PRICE_KEYWORD_RE.test(combinedContext);
+
+  // Require an actual price signal (currency marker or nearby pricing language).
+  if (!hasCurrencySignal && !hasPriceKeyword) {
+    return null;
+  }
+
+  if (looksLikePhoneNumber(raw) || looksLikeIdentifier(raw)) {
+    return null;
+  }
+
+  // If surrounding text looks like IDs/orders and there is no strong pricing word,
+  // treat it as non-price.
+  if (
+    NON_PRICE_KEYWORD_RE.test(combinedContext) &&
+    !hasCurrencySignal &&
+    !STRONG_PRICE_KEYWORD_RE.test(combinedContext)
+  ) {
+    return null;
+  }
+
+  // Reject date/range-like text unless a currency marker is present.
+  if (!hasCurrencySignal && /\d+\s*[-/]\s*\d+/.test(raw)) {
+    return null;
+  }
+
+  // Prices with more than 2 decimals are usually not real prices in this use case.
+  if (/\.\d{3,}/.test(raw)) {
+    return null;
+  }
+
+  const numberMatches = raw.match(/(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?/g);
+  if (!numberMatches || numberMatches.length === 0) {
+    return null;
+  }
+
+  // Multiple numeric chunks without currency marker are commonly phones/IDs.
+  if (numberMatches.length > 1 && !hasCurrencySignal) {
+    return null;
+  }
+
+  let amountToken = numberMatches[0];
+  if (numberMatches.length > 1 && hasCurrencySignal) {
+    const currencyAmountMatch = raw.match(
+      /(?:[$\u00A3\u00A5\u20AC\u20B9]\s*|(?:USD|CAD|EUR|GBP|JPY|INR|AUD|NZD|CHF)\s*)((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?)/i
+    );
+    if (currencyAmountMatch) {
+      amountToken = currencyAmountMatch[1];
+    }
+  }
+
+  const normalizedAmount = amountToken.replace(/,/g, "");
+  const value = Number.parseFloat(normalizedAmount);
+  if (!Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+
+  const integerDigits = normalizedAmount.split(".")[0].replace(/^0+/, "").length;
+  if (integerDigits > 7 && !hasCurrencySignal) {
+    return null;
+  }
+
+  // Reject bare bullet/list numbers like "1." or "2)" unless price context exists.
+  if (/^[\-*\u2022]?\s*\d+[.)]?$/.test(raw) && !hasCurrencySignal && !hasPriceKeyword) {
+    return null;
+  }
+
+  return value;
 }
 
 export const taxRates = {

@@ -1,10 +1,84 @@
 (() => {
   // src/taxUtils.js
-  function parsePrice(text) {
-    const cleaned = text.replace(/[^0-9.]/g, "");
-    const value = parseFloat(cleaned);
-    console.log(`Parsed value from "${text}" is ${value}`);
-    return isNaN(value) ? null : value;
+  var CURRENCY_SYMBOL_RE = /[$\u00A3\u00A5\u20AC\u20B9]/;
+  var CURRENCY_CODE_RE = /\b(?:USD|CAD|EUR|GBP|JPY|INR|AUD|NZD|CHF)\b/i;
+  var PRICE_KEYWORD_RE = /\b(?:price|total|amount|cost|subtotal|checkout|cart|sale|deal|discount|pay|payment|paid|due|from|now|was|only|each|per|msrp|list\s+price|starting\s+at)\b/i;
+  var STRONG_PRICE_KEYWORD_RE = /\b(?:price|total|amount|cost|subtotal|due)\b/i;
+  var NON_PRICE_KEYWORD_RE = /\b(?:phone|tel|mobile|fax|call|item(?:\s*no\.?)?|order(?:\s*no\.?)?|invoice|tracking|shipment|id|sku|serial|reference|ref|ticket|account|zip|postal|pin|ssn|model|part)\b/i;
+  function normalizeText(text) {
+    return (text || "").replace(/\s+/g, " ").trim();
+  }
+  function looksLikePhoneNumber(text) {
+    const trimmed = normalizeText(text).replace(/\b(?:ext|x)\s*\d+$/i, "").trim();
+    const digits = trimmed.replace(/\D/g, "");
+    if (digits.length < 9 || digits.length > 13) {
+      return false;
+    }
+    if (CURRENCY_SYMBOL_RE.test(trimmed) || CURRENCY_CODE_RE.test(trimmed)) {
+      return false;
+    }
+    return /[\s().-]/.test(trimmed) || /^\+?\d+$/.test(trimmed);
+  }
+  function looksLikeIdentifier(text) {
+    const trimmed = normalizeText(text);
+    if (!trimmed) {
+      return false;
+    }
+    return /[A-Za-z]/.test(trimmed) && /\d/.test(trimmed) && !CURRENCY_CODE_RE.test(trimmed);
+  }
+  function parsePrice(text, contextText = "") {
+    const raw = normalizeText(text);
+    const context = normalizeText(contextText);
+    if (!raw || /%/.test(raw)) {
+      return null;
+    }
+    const combinedContext = `${context} ${raw}`;
+    const hasCurrencySignal = CURRENCY_SYMBOL_RE.test(combinedContext) || CURRENCY_CODE_RE.test(combinedContext);
+    const hasPriceKeyword = PRICE_KEYWORD_RE.test(combinedContext);
+    if (!hasCurrencySignal && !hasPriceKeyword) {
+      return null;
+    }
+    if (looksLikePhoneNumber(raw) || looksLikeIdentifier(raw)) {
+      return null;
+    }
+    if (NON_PRICE_KEYWORD_RE.test(combinedContext) && !hasCurrencySignal && !STRONG_PRICE_KEYWORD_RE.test(combinedContext)) {
+      return null;
+    }
+    if (!hasCurrencySignal && /\d+\s*[-/]\s*\d+/.test(raw)) {
+      return null;
+    }
+    if (/\.\d{3,}/.test(raw)) {
+      return null;
+    }
+    const numberMatches = raw.match(/(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?/g);
+    if (!numberMatches || numberMatches.length === 0) {
+      return null;
+    }
+    if (numberMatches.length > 1 && !hasCurrencySignal) {
+      return null;
+    }
+    let amountToken = numberMatches[0];
+    if (numberMatches.length > 1 && hasCurrencySignal) {
+      const currencyAmountMatch = raw.match(
+        /(?:[$\u00A3\u00A5\u20AC\u20B9]\s*|(?:USD|CAD|EUR|GBP|JPY|INR|AUD|NZD|CHF)\s*)((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?)/i
+      );
+      if (currencyAmountMatch) {
+        amountToken = currencyAmountMatch[1];
+      }
+    }
+    const normalizedAmount = amountToken.replace(/,/g, "");
+    const value = Number.parseFloat(normalizedAmount);
+    if (!Number.isFinite(value) || value <= 0) {
+      return null;
+    }
+    const integerDigits = normalizedAmount.split(".")[0].replace(/^0+/, "").length;
+    if (integerDigits > 7 && !hasCurrencySignal) {
+      return null;
+    }
+    if (/^[\-*\u2022]?\s*\d+[.)]?$/.test(raw) && !hasCurrencySignal && !hasPriceKeyword) {
+      return null;
+    }
+    return value;
   }
   var taxRates = {
     Canada: {
@@ -142,6 +216,34 @@
   }
 
   // src/content.js
+  function normalizeText2(text) {
+    return (text || "").replace(/\s+/g, " ").trim();
+  }
+  function getSelectionContext(range, selectedText) {
+    const selected = normalizeText2(selectedText);
+    const anchor = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE ? range.commonAncestorContainer : range.commonAncestorContainer.parentElement;
+    if (!anchor || !anchor.textContent) {
+      return selected;
+    }
+    const fullText = normalizeText2(anchor.textContent);
+    if (!fullText) {
+      return selected;
+    }
+    const index = fullText.toLowerCase().indexOf(selected.toLowerCase());
+    if (index < 0) {
+      return fullText.slice(0, 300);
+    }
+    const start = Math.max(0, index - 120);
+    const end = Math.min(fullText.length, index + selected.length + 120);
+    return fullText.slice(start, end);
+  }
+  function isEditableSelection(range) {
+    const node = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE ? range.commonAncestorContainer : range.commonAncestorContainer.parentElement;
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+      return false;
+    }
+    return Boolean(node.closest("input, textarea, [contenteditable=''], [contenteditable='true'], [role='textbox']"));
+  }
   document.addEventListener("mouseup", async () => {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
@@ -153,12 +255,6 @@
       hideTooltip();
       return;
     }
-    const price = parsePrice(text);
-    if (price === null) {
-      hideTooltip();
-      return;
-    }
-    const taxRate = await getStoredTaxRate();
     let range, rect;
     try {
       range = selection.getRangeAt(0);
@@ -168,6 +264,17 @@
       hideTooltip();
       return;
     }
+    if (isEditableSelection(range)) {
+      hideTooltip();
+      return;
+    }
+    const contextText = getSelectionContext(range, text);
+    const price = parsePrice(text, contextText);
+    if (price === null) {
+      hideTooltip();
+      return;
+    }
+    const taxRate = await getStoredTaxRate();
     const x = rect.left + window.scrollX + rect.width / 2;
     const y = rect.bottom + window.scrollY + 5;
     if (taxRate === null) {
@@ -178,10 +285,6 @@
     showTooltip(x, y, `After tax: $${afterTax}`);
   });
   document.addEventListener("mousedown", () => {
-    hideTooltip();
-  });
-  document.addEventListener("mousedown", () => {
-    console.log("Mouse down - hiding tooltip");
     hideTooltip();
   });
 })();

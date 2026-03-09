@@ -15,14 +15,14 @@ h1 {
   text-align: center;
 }
 
-.radio-group {
+#modeSelection {
   display: flex;
-  gap: 12px;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-bottom: 20px;
 }
 
-label.radio {
+#modeSelection label {
   font-weight: 500;
   display: flex;
   align-items: center;
@@ -67,4 +67,89 @@ button {
 
 button:hover {
   background-color: #45a049;
+}
+
+.helpCard {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background-color: #f8faf7;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.helpCard h2 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+}
+
+.helpCard ol {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.helpNote {
+  margin: 10px 0 0 0;
+  color: #355a35;
+}
+
+.supportCard {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #e5d8bf;
+  border-radius: 8px;
+  background-color: #fffaf0;
+  font-size: 13px;
+}
+
+.supportCard h2 {
+  margin: 0 0 6px 0;
+  font-size: 14px;
+}
+
+.supportCard p {
+  margin: 0;
+}
+
+.supportActions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.donateLink {
+  flex: 1;
+  text-align: center;
+  text-decoration: none;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background-color: #0070ba;
+  transition: opacity 0.2s ease;
+}
+
+.donateLink.secondary {
+  background-color: #ff813f;
+}
+
+.donateLink:hover {
+  opacity: 0.92;
+}
+
+.donateLink.disabled {
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+.donateLink.hidden {
+  display: none;
+}
+
+.supportHint {
+  margin-top: 8px;
+  color: #7a5b2f;
+  font-size: 12px;
 }

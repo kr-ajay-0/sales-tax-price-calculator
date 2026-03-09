@@ -2,9 +2,9 @@
 <html>
 
 <head>
-    <meta charset="UTF-8">
-    <title>Tax Settings</title>
-    <link rel="stylesheet" href="popup.css">
+  <meta charset="UTF-8">
+  <title>Tax Settings</title>
+  <link rel="stylesheet" href="popup.css">
 </head>
 
 <body>
@@ -12,7 +12,7 @@
 
   <!-- Radios all grouped together -->
   <div id="modeSelection">
-    <label><input type="radio" name="mode" value="Canada"> Canada</label>
+    <label><input type="radio" name="mode" value="Canada" checked> Canada</label>
     <label><input type="radio" name="mode" value="US"> United States</label>
     <label><input type="radio" name="mode" value="Custom"> Custom Rate</label>
   </div>
@@ -36,6 +36,33 @@
   </div>
 
   <button id="saveBtn">Save Settings</button>
+
+  <section class="helpCard" aria-label="How to use">
+    <h2>How To Use</h2>
+    <ol>
+      <li>Select your tax mode (Canada, US, or Custom).</li>
+      <li>Click <strong>Save Settings</strong>.</li>
+      <li>On any webpage, highlight a price like <strong>$19.99</strong> or <strong>USD 49</strong>.</li>
+      <li>You will see a tooltip with the after-tax amount.</li>
+    </ol>
+    <p class="helpNote">
+      Tip: phone numbers, order IDs, and list numbers are ignored on purpose.
+    </p>
+  </section>
+
+  <section class="supportCard" aria-label="Support this extension">
+    <h2>Support This Extension</h2>
+    <p>If you liked this extension, you can support development:</p>
+    <div class="supportActions">
+      <a id="paypalDonateLink" class="donateLink" href="#" target="_blank" rel="noopener noreferrer">
+        Donate with PayPal
+      </a>
+      <a id="coffeeDonateLink" class="donateLink secondary" href="#" target="_blank" rel="noopener noreferrer">
+        Buy Me a Coffee
+      </a>
+    </div>
+    <p id="donationHint" class="supportHint"></p>
+  </section>
 
   <script src="popup.js"></script>
 </body>

@@ -1,6 +1,15 @@
 const canadaRegionSelect = document.getElementById("canadaRegion");
 const usRegionSelect = document.getElementById("usRegion");
 const customRateInput = document.getElementById("customRate");
+const paypalDonateLink = document.getElementById("paypalDonateLink");
+const coffeeDonateLink = document.getElementById("coffeeDonateLink");
+const donationHint = document.getElementById("donationHint");
+
+// Update these links to your own pages.
+const DONATION_LINKS = {
+  paypal: "https://paypal.me/krajaydev",
+  buyMeACoffee: ""
+};
 
 const canadaRegions = {
   AB: "Alberta (5%)",
@@ -10,7 +19,7 @@ const canadaRegions = {
   NL: "Newfoundland and Labrador (15%)",
   NT: "Northwest Territories (5%)",
   NS: "Nova Scotia (14%)",
-  NU: "Nunavut (5%)", 
+  NU: "Nunavut (5%)",
   ON: "Ontario (13%)",
   PE: "Prince Edward Island (15%)",
   QC: "Quebec (14.975%)",
@@ -87,9 +96,14 @@ const canadaSection = document.getElementById("canadaSection");
 const usSection = document.getElementById("usSection");
 const customSection = document.getElementById("customSection");
 
+function getSelectedMode() {
+  const checkedRadio = document.querySelector('input[name="mode"]:checked');
+  return checkedRadio ? checkedRadio.value : "Canada";
+}
+
 // Show/hide sections based on selected mode
 function updateSections() {
-  const selectedMode = document.querySelector('input[name="mode"]:checked').value;
+  const selectedMode = getSelectedMode();
   canadaSection.classList.toggle('active', selectedMode === "Canada");
   usSection.classList.toggle('active', selectedMode === "US");
   customSection.classList.toggle('active', selectedMode === "Custom");
@@ -98,7 +112,7 @@ function updateSections() {
 
 // Save settings to chrome.storage
 function saveSettings() {
-  const selectedMode = document.querySelector('input[name="mode"]:checked').value;
+  const selectedMode = getSelectedMode();
   const data = { mode: selectedMode };
 
   if (selectedMode === "Canada") {
@@ -110,13 +124,20 @@ function saveSettings() {
     data.region = usRegionSelect.value;
     data.customRate = "";
   } else if (selectedMode === "Custom") {
+    const customRate = customRateInput.value.trim();
+    const parsedRate = Number.parseFloat(customRate);
+    if (!customRate || !Number.isFinite(parsedRate) || parsedRate < 0) {
+      alert("Enter a valid custom tax rate (0 or higher).");
+      customRateInput.focus();
+      return;
+    }
     data.country = "Custom";
     data.region = "";
-    data.customRate = customRateInput.value.trim();
+    data.customRate = customRate;
   }
 
   chrome.storage.sync.set(data, () => {
-    window.close(); 
+    window.close();
   });
 }
 
@@ -144,7 +165,8 @@ function loadSettings() {
 
 // Apply loaded or default settings to UI
 function applySettings(data) {
-  const mode = data.mode;
+  const validModes = new Set(["Canada", "US", "Custom"]);
+  const mode = validModes.has(data.mode) ? data.mode : "Canada";
 
   // Set mode radio
   const modeRadio = Array.from(modeRadios).find(r => r.value === mode);
@@ -173,6 +195,48 @@ function applySettings(data) {
   }
 }
 
+function isValidHttpUrl(value) {
+  if (!value) return false;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch (e) {
+    return false;
+  }
+}
+
+function configureDonationLink(element, url, options = {}) {
+  const { hideIfMissing = false } = options;
+  if (isValidHttpUrl(url)) {
+    element.href = url;
+    element.classList.remove("disabled", "hidden");
+    return true;
+  }
+
+  element.removeAttribute("href");
+  element.classList.add("disabled");
+  if (hideIfMissing) {
+    element.classList.add("hidden");
+  }
+  return false;
+}
+
+function configureDonationButtons() {
+  const hasPaypal = configureDonationLink(paypalDonateLink, DONATION_LINKS.paypal);
+  const hasCoffee = configureDonationLink(
+    coffeeDonateLink,
+    DONATION_LINKS.buyMeACoffee,
+    { hideIfMissing: true }
+  );
+
+  if (!hasPaypal && !hasCoffee) {
+    donationHint.textContent =
+      "Set DONATION_LINKS in popup.js to enable donation buttons.";
+  } else {
+    donationHint.textContent = "";
+  }
+}
+
 modeRadios.forEach(radio => {
   radio.addEventListener("change", updateSections);
 });
@@ -185,4 +249,5 @@ document.getElementById("saveBtn").addEventListener("click", saveSettings);
 // Initialize UI
 populateSelect(canadaRegionSelect, canadaRegions);
 populateSelect(usRegionSelect, usRegions);
+configureDonationButtons();
 loadSettings();
