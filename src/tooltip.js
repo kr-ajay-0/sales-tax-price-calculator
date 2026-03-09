@@ -16,7 +16,6 @@ export function createTooltip() {
       opacity: 0;
     `;
     document.body.appendChild(tooltip);
-    console.log("Tooltip created and added to document.");
   }
   return tooltip;
 }
@@ -27,13 +26,11 @@ export function showTooltip(x, y, text) {
   tooltip.style.left = `${x}px`;
   tooltip.style.top = `${y}px`;
   tooltip.style.opacity = 1;
-  console.log(`Tooltip positioned at (${x}, ${y}) with text: "${text}"`);
 }
 
 export function hideTooltip() {
   const tooltip = document.getElementById("tax-tooltip");
   if (tooltip) {
     tooltip.style.opacity = 0;
-    console.log("Tooltip hidden");
   }
 }

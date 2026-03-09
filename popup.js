@@ -154,7 +154,6 @@ function loadSettings() {
         customRate: ""
       };
       chrome.storage.sync.set(defaultData, () => {
-        console.log("Default settings saved:", defaultData);
         applySettings(defaultData);
       });
     } else {

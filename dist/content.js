@@ -152,23 +152,18 @@
   async function getStoredTaxRate() {
     return new Promise((resolve) => {
       chrome.storage.sync.get(["country", "region", "customRate"], (data) => {
-        console.log("Storage get result:", data);
         if (!data.country) {
           return resolve(null);
         }
         if (data.country === "Custom") {
           const rate = parseFloat(data.customRate);
-          console.log("Custom tax rate:", rate);
           return resolve(isNaN(rate) ? null : rate / 100);
         }
         if (data.country === "Canada" || data.country === "US") {
           const regionRate = taxRates[data.country][data.region];
-          console.log(`Loaded tax settings data:`, data);
           if (regionRate == null) {
-            console.warn("No tax rate set for country/region without fallback");
             return resolve(null);
           }
-          console.log(`Resolved tax rate for ${data.country}-${data.region}: ${regionRate}`);
           return resolve(regionRate / 100);
         }
         resolve(null);
@@ -195,7 +190,6 @@
       opacity: 0;
     `;
       document.body.appendChild(tooltip);
-      console.log("Tooltip created and added to document.");
     }
     return tooltip;
   }
@@ -205,13 +199,11 @@
     tooltip.style.left = `${x}px`;
     tooltip.style.top = `${y}px`;
     tooltip.style.opacity = 1;
-    console.log(`Tooltip positioned at (${x}, ${y}) with text: "${text}"`);
   }
   function hideTooltip() {
     const tooltip = document.getElementById("tax-tooltip");
     if (tooltip) {
       tooltip.style.opacity = 0;
-      console.log("Tooltip hidden");
     }
   }
 

@@ -1,14 +1,15 @@
 {
-  "name": "tax-calculator-extension",
-  "version": "1.0.0",
+  "name": "sales-tax-price-calculator",
+  "version": "1.0.3",
   "main": "content.js",
   "scripts": {
-    "build": "esbuild src/content.js --bundle --outfile=dist/content.js"
+    "build": "esbuild src/content.js --bundle --outfile=dist/content.js",
+    "package:chrome": "npm run build && powershell -ExecutionPolicy Bypass -File scripts/package-extension.ps1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "Estimate sales tax on selected prices while shopping online.",
   "devDependencies": {
     "esbuild": "^0.25.5"
   }

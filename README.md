@@ -1,12 +1,12 @@
-# Tax Calculator Extension
+# Sales Tax Price Calculator
 
-Chrome extension that shows after-tax price when you select price text on a webpage.
+Chrome extension that shows after-tax shopping price when you select price text on a webpage. Not for tax filing or tax returns.
 
 ## Install (Developer Mode)
 1. Open `chrome://extensions`.
 2. Turn on **Developer mode**.
 3. Click **Load unpacked**.
-4. Select this folder: `tax-calculator-extension`.
+4. Select this project folder.
 
 ## How To Use
 1. Click the extension icon.
@@ -24,6 +24,18 @@ Chrome extension that shows after-tax price when you select price text on a webp
 ## Troubleshooting
 - If changes do not apply, go to `chrome://extensions` and click **Reload**.
 - If icon does not appear, pin the extension from Chrome's extensions menu.
+
+## Build And Package
+- Build extension bundle:
+  - `npm run build`
+- Create Chrome Web Store ZIP:
+  - `npm run package:chrome`
+- Output ZIP:
+  - `release/sales-tax-price-calculator-v<manifest-version>.zip`
+
+## Publishing
+- Follow the ordered checklist in `PUBLISHING.md`.
+- Privacy policy text is in `PRIVACY.md`.
 
 ## Donation Buttons
 - Open `popup.js`.
