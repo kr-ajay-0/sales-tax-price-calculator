@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Tax Calculator",
+  "version": "1.0",
+  "description": "Calculate after-tax price when selecting text on any page.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "dist/content.js"
+      ]
+    }
+  ]
+}

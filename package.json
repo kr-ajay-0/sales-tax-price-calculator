@@ -1,0 +1,15 @@
+{
+  "name": "tax-calculator-extension",
+  "version": "1.0.0",
+  "main": "content.js",
+  "scripts": {
+    "build": "esbuild src/content.js --bundle --outfile=dist/content.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "esbuild": "^0.25.5"
+  }
+}
